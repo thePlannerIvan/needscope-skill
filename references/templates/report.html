@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>[品牌名] NeedScope 品牌原型分析 — v3</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Inter:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --paper: #fafaf8;
+      --ink: #1a1a1a;
+      --muted: #737373;
+      --line: rgba(0,0,0,.12);
+      --accent: #315d93;
+      --red:    #d4786e;
+      --purple: #9b7eb8;
+      --blue:   #6e8fb8;
+      --brown:  #b8977e;
+      --orange: #d4a856;
+      --yellow: #c4b84e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f0f0ee;
+      font-family: "Noto Sans SC", "Inter", -apple-system, sans-serif;
+      color: var(--ink);
+      padding: 48px 24px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .sheet {
+      max-width: 900px; width: 100%;
+      background: var(--paper);
+      padding: 64px 72px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    h1 { font-family: "Noto Serif SC", serif; font-size: 36px; font-weight: 500; margin-bottom: 8px; }
+    h2 { font-family: "Noto Serif SC", serif; font-size: 24px; font-weight: 500; margin-top: 48px; margin-bottom: 16px; padding-top: 24px; border-top: 1px solid var(--line); }
+    h3 { font-size: 18px; font-weight: 600; margin-top: 32px; margin-bottom: 8px; }
+    p, li { font-size: 15px; line-height: 1.7; color: var(--ink); }
+    .muted { color: var(--muted); font-size: 13px; }
+
+    .overall-confidence {
+      display: inline-block; padding: 6px 14px; border-radius: 4px;
+      font-size: 14px; font-weight: 600; margin-bottom: 24px;
+    }
+    .conf-decision { background: #e6f4ea; color: #1e7e34; }
+    .conf-directional { background: #fff8e1; color: #b8860b; }
+    .conf-exploratory-usable { background: #fef3e1; color: #bf6d00; }
+    .conf-exploratory-thin { background: #fce4e4; color: #c44f4f; }
+
+    .tag-high { color: #1e7e34; font-weight: 600; }
+    .tag-mid { color: #b8860b; font-weight: 600; }
+    .tag-low { color: #c44f4f; font-weight: 600; }
+    .tag-none { color: #999; font-weight: 400; }
+
+    /* v3: risk badge */
+    .risk-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 3px;
+      font-size: 12px; font-weight: 600;
+    }
+    .risk-high { background: #fce4e4; color: #c44f4f; }
+    .risk-medium { background: #fff8e1; color: #b8860b; }
+    .risk-low { background: #e6f4ea; color: #1e7e34; }
+
+    /* v3: positioning box — first screen */
+    .positioning-box {
+      margin: 24px 0; padding: 28px 32px; border-radius: 8px;
+      background: #f8f7f4; border: 2px solid var(--accent);
+    }
+    .positioning-box .main-claim {
+      font-size: 22px; font-weight: 700; color: var(--ink);
+    }
+    .positioning-box .undecided {
+      font-size: 20px; font-weight: 600; color: #c44f4f;
+    }
+
+    /* v3: signal split panels — first screen */
+    .signal-split {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0;
+    }
+    @media (max-width: 720px) { .signal-split { grid-template-columns: 1fr; } }
+    .signal-panel {
+      padding: 18px 20px; border-radius: 8px; border: 1px solid var(--line);
+      background: #f8f7f4;
+    }
+    .signal-panel.context {
+      background: #f1f1ef; border-style: dashed; color: #595959;
+    }
+    .signal-panel h3 { margin-top: 0; font-size: 16px; }
+
+    /* v3: evidence item card */
+    .evidence-item {
+      margin: 12px 0; padding: 12px 16px;
+      background: #f8f7f4; border-left: 3px solid var(--accent);
+      font-size: 14px; line-height: 1.6;
+    }
+    .evidence-item .meta { font-size: 12px; color: #999; margin-top: 4px; }
+
+    /* v3: excluded item card (dimmed) */
+    .excluded-item {
+      margin: 12px 0; padding: 12px 16px;
+      background: #f1f1ef; border-left: 3px solid #ccc;
+      font-size: 14px; line-height: 1.6; color: #666;
+    }
+    .excluded-item .meta { font-size: 12px; color: #aaa; margin-top: 4px; }
+
+    /* v3: noise card (muted) */
+    .noise-list li { color: #666; }
+
+    .signal-chip {
+      display: inline-block; margin: 6px 6px 0 0; padding: 4px 8px;
+      border-radius: 4px; background: #fff; border: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    /* 原型色条 — 附录 only */
+    .proto-bars { margin: 24px 0; }
+    .proto-row {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .proto-label {
+      width: 80px; text-align: right; font-size: 14px; font-weight: 500; flex-shrink: 0;
+    }
+    .proto-track {
+      flex: 1; height: 22px; background: #eee; border-radius: 3px; overflow: hidden; position: relative;
+    }
+    .proto-fill {
+      height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px;
+      font-size: 12px; font-weight: 600; color: #fff;
+    }
+    .proto-score { width: 36px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+
+    table.matrix { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+    table.matrix th { background: #f5f4f1; padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--line); }
+    table.matrix td { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+
+    .callout {
+      margin: 24px 0; padding: 20px 24px; border-radius: 6px;
+      background: #fff8e1; border: 1px solid #e6d88a; font-size: 14px;
+    }
+    .callout.warn { background: #fce4e4; border-color: #e6b8b8; }
+
+    .appendix-note {
+      margin: 24px 0; padding: 16px 20px; border-radius: 6px;
+      background: #f5f4f1; border: 1px dashed var(--line); font-size: 13px; color: #666;
+    }
+
+    .low-confidence-row { opacity: 0.55; }
+
+    .report-footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: #aaa; }
+  </style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- 报告头部 -->
+  <div class="overall-confidence [conf-decision|conf-directional|conf-exploratory]">整体置信度：[决策级/方向级/探索级]</div>
+  <h1>[品牌名] NeedScope 品牌原型分析</h1>
+  <p class="muted">
+    数据基础：品牌评论 X 条，笔记标题 X 条，竞品覆盖 X 个品牌 ·
+    分析对象类型：[brand/product/founder/等] ·
+    上下文风险等级：<span class="risk-badge risk-[low|medium|high]">[low/medium/high]</span> ·
+    生成时间：YYYY-MM-DD HH:MM
+  </p>
+
+  <!-- v3 第一屏 #1: 品牌人格可判定性 -->
+  <h2>一、品牌人格可判定性</h2>
+  <div class="positioning-box">
+    <p class="main-claim">品牌的主落点是：[原型名称 / 未判定]</p>
+    <p>消费者买的是 [一句话定义]</p>
+    <p class="muted">此判断基于 v3.2 双层品牌自有证据：核心证据为 primary_eligible；辅助证据为 secondary_only，单独降权解释。两者均要求 signal_owner in brand/product/product_line 且 signal_role≠contextual_noise。founder/content/campaign/community/platform/category/competitor 不进入品牌主证据。</p>
+  </div>
+  <p class="muted">[如为未判定] 原因：[insufficient_owned_signal_reason] — 当前数据不足以判定品牌公众人格，以下仅为语境信号分析。</p>
+
+  <!-- v3 第一屏 #2: 自有信号 vs 语境信号 -->
+  <h2>二、品牌自有信号 vs 语境信号</h2>
+  <div class="signal-split">
+    <div class="signal-panel">
+      <h3>品牌自有信号（核心 + 辅助）</h3>
+      <p>包括核心证据 primary_eligible 与方向性辅助证据 secondary_only；辅助证据必须单独降权，不得与核心证据混合展示。</p>
+      <span class="signal-chip">呵护型 · brand · primary_eligible 🟢</span>
+      <span class="signal-chip">归属型 · product_line · secondary_only 🟡</span>
+    </div>
+    <div class="signal-panel context">
+      <h3>语境信号（不得定义品牌主落点）</h3>
+      <p>包括 founder / content / community / platform / campaign / event 等信号。</p>
+      <span class="signal-chip">愉悦型 · community · exclude_from_positioning</span>
+      <span class="signal-chip">愉悦型 · platform · context_only</span>
+    </div>
+  </div>
+
+  <!-- v3 第一屏 #3: 主落点证据 -->
+  <h3>主落点证据条目（primary_evidence_items）</h3>
+  <div class="evidence-item">
+    "代表性消费者原声"
+    <div class="meta">signal_owner: brand · asset_eligibility: primary_eligible · signal_role: core_identity · 指向原型：呵护型 🟢</div>
+  </div>
+  <div class="evidence-item">
+    "代表性消费者原声"
+    <div class="meta">signal_owner: product · asset_eligibility: primary_eligible · signal_role: supporting_asset · 指向原型：归属型 🟡</div>
+  </div>
+
+  <h3>被排除的高影响信号</h3>
+  <div class="excluded-item">
+    "[高赞社区文本]"
+    <div class="meta">signal_owner: community · asset_eligibility: exclude_from_positioning · 排除理由：社区氛围，非品牌自有信号</div>
+  </div>
+
+  <h3>被降权或剔除的高频噪声</h3>
+  <ul class="noise-list">
+    <li>doge / 哈哈 / 笑 / 评论区玩梗：signal_owner 为 community/platform，asset_eligibility=exclude_from_positioning，不进入品牌主落点。</li>
+    <li>赛事梗 / 球星梗：未落脚到品牌或产品，asset_eligibility=context_only，不进入品牌主落点。</li>
+  </ul>
+
+  <h3>创始人 / 内容 IP 旁路画像（如适用）</h3>
+  <p class="muted">以下不是品牌主落点证据，只解释人物舆情、内容体验、传播语境或平台分裂。</p>
+  <div class="signal-split">
+    <div class="signal-panel context">
+      <h3>Founder Shadow</h3>
+      <p>[创始人旁路画像摘要：原型/负向缺口/张力]</p>
+    </div>
+    <div class="signal-panel context">
+      <h3>Content-IP Shadow</h3>
+      <p>[内容体验旁路画像摘要：内容带来的感受，不等于品牌人格]</p>
+    </div>
+  </div>
+
+  <!-- v3 第一屏 #4: 置信度上限与数据限制 -->
+  <h2>三、数据置信度上限与限制</h2>
+  <p>整体置信度：[决策级 🟢 / 方向级 🟡 / 探索级 🟠 / 数据不足 🔴]</p>
+  <p class="muted">上下文风险调整后的置信度上限：[max_confidence_ceiling] · 数据基础量：[N] 条</p>
+
+  <!-- v3 正文: 后续章节从次落点与张力开始 -->
+  <h2>四、次落点与张力</h2>
+  <h3>次落点</h3>
+  <p>……</p>
+  <h3>张力信号</h3>
+  <p>……</p>
+  <h3>信号缺席 / 负向缺口</h3>
+  <p>……</p>
+
+  <h2>五、品类 / 竞品地图</h2>
+  <p>……</p>
+
+  <h2>六、品牌表达 vs 消费者感知</h2>
+  <p>……</p>
+
+  <h2>七、产品线人格分工</h2>
+  <table class="matrix">
+    <thead><tr><th>产品线</th><th>主原型</th><th>次原型</th><th>置信度</th><th>数据量</th></tr></thead>
+    <tbody>
+      <tr><td>线 A</td><td>呵护型</td><td>归属型</td><td><span class="tag-high">🟢 高</span></td><td>评论 45 条</td></tr>
+      <tr class="low-confidence-row"><td>线 B</td><td>掌控型</td><td>身份型</td><td><span class="tag-low">🔴 低</span></td><td>评论 2 条</td></tr>
+    </tbody>
+  </table>
+
+  <h2>八、策略建议</h2>
+  <div class="callout" style="background:#e6f4ea;border-color:#a5d6a7">
+    <strong>🟢 建议一</strong>：坚守呵护型核心资产……<br>
+    <span class="muted">基于：主落点呵护型 🟢 高置信</span>
+  </div>
+  <div class="callout" style="background:#fff8e1;border-color:#ffe082">
+    <strong>🟡 建议二</strong>：适度拓展归属型信号……<br>
+    <span class="muted">基于：次落点归属型 🟡 中置信 + 掌控型无信号缺口</span>
+  </div>
+  <div class="callout warn">
+    <strong>🔴 建议三</strong>：关注负向缺口……<br>
+    <span class="muted">基于：2 条评论提到"不够专业"，数据不足需验证</span>
+  </div>
+
+  <h2>九、数据补充建议</h2>
+  <div class="callout warn">
+    <strong>⚠️ 本报告为方向级分析。</strong>如需升级到决策级建议：
+    <ol style="margin:12px 0 0 20px">
+      <li>品牌消费者评论 ≥100 条 — 当前仅靠标题分析，无法验证消费者真实感受</li>
+      <li>竞品消费者评论 ≥50 条/品牌 — 当前竞品仅有官方号数据</li>
+    </ol>
+  </div>
+
+  <!-- v3 附录: 六原型条形图 — 仅限附录，不得位于主视觉 -->
+  <h2>附录：信号分布参考</h2>
+  <div class="appendix-note">
+    ⚠️ 以下分数为信号密度参考值，<strong>不是品牌能力评分</strong>。六原型条形图按 signal_owner（owned vs context）分段展示。此附录内容不作为报告第一结论。
+  </div>
+
+  <h3>品牌自有信号密度 (brand / product / product_line)</h3>
+  <div class="proto-bars">
+    <div class="proto-row">
+      <span class="proto-label">突破型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:25%;background:var(--red);">25</div></div>
+      <span class="proto-score">25 🟠</span>
+    </div>
+    <div class="proto-row">
+      <span class="proto-label">身份型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:10%;background:var(--purple);">10</div></div>
+      <span class="proto-score">10 🔴</span>
+    </div>
+    <div class="proto-row">
+      <span class="proto-label">掌控型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:40%;background:var(--blue);">40</div></div>
+      <span class="proto-score">40 🟡</span>
+    </div>
+    <div class="proto-row">
+      <span class="proto-label">呵护型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:82%;background:var(--brown);">82</div></div>
+      <span class="proto-score">82 🟢</span>
+    </div>
+    <div class="proto-row">
+      <span class="proto-label">归属型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:35%;background:var(--orange);">35</div></div>
+      <span class="proto-score">35 🟡</span>
+    </div>
+    <div class="proto-row">
+      <span class="proto-label">愉悦型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:15%;background:var(--yellow);">15</div></div>
+      <span class="proto-score">15 🔴</span>
+    </div>
+  </div>
+
+  <h3>语境信号密度 (founder/content/community/platform/campaign)</h3>
+  <div class="proto-bars">
+    <div class="proto-row">
+      <span class="proto-label">愉悦型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:70%;background:var(--yellow);">70</div></div>
+      <span class="proto-score">70 🟡</span>
+    </div>
+    <div class="proto-row">
+      <span class="proto-label">归属型</span>
+      <div class="proto-track"><div class="proto-fill" style="width:20%;background:var(--orange);">20</div></div>
+      <span class="proto-score">20 🔴</span>
+    </div>
+  </div>
+  <p class="muted">注：语境信号高频不等于品牌资产。愉悦型 70 主要来自社区/平台语境，不进入品牌主定位。</p>
+
+  <div class="report-footer">NeedScope 品牌原型分析 · 由 AI Agent 生成 · 数据来源：[文件清单] · v3 合规</div>
+</div>
+</body>
+</html>

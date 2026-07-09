@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "02_sampling_plan",
+  "description": "Step 2: 抽样与编码策略设计合约（v3）",
+  "type": "object",
+  "required": [
+    "total_records",
+    "dedupe_strategy",
+    "sampling_mode",
+    "sample_sizes",
+    "random_sample",
+    "high_like_sample",
+    "context_risk_sample",
+    "excluded_records",
+    "rationale"
+  ],
+  "properties": {
+    "total_records": {
+      "type": "integer",
+      "description": "原始数据总记录数"
+    },
+    "dedupe_strategy": {
+      "type": "string",
+      "enum": ["exact", "fuzzy", "none"],
+      "description": "去重方法"
+    },
+    "sampling_mode": {
+      "type": "string",
+      "enum": ["full", "stratified", "clustered", "active_learning"],
+      "description": "抽样模式"
+    },
+    "strata": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "分层维度列表（当 sampling_mode=stratified 时必须）"
+    },
+    "sample_sizes": {
+      "type": "object",
+      "required": ["total"],
+      "properties": {
+        "total": { "type": "integer", "description": "最终编码的文本总量" },
+        "by_stratum": { "type": "object", "description": "每层的抽样数（当有分层时）" }
+      }
+    },
+    "random_sample": {
+      "type": "object",
+      "required": ["size", "selection_method"],
+      "properties": {
+        "size": { "type": "integer", "description": "随机样本量" },
+        "selection_method": { "type": "string", "description": "随机抽取方法说明" }
+      },
+      "description": "随机抽样：保证统计代表性的基础样本集。所有正式运行必须包含随机样本。"
+    },
+    "high_like_sample": {
+      "type": "object",
+      "required": ["size", "criteria"],
+      "properties": {
+        "size": { "type": "integer", "description": "高互动样本量" },
+        "criteria": { "type": "string", "description": "高互动判定标准（如点赞数≥100、评论数≥50）" }
+      },
+      "description": "高互动样本：高赞/高回复文本的定向抽样。高互动文本可能包含强劲的品牌信号，也可能只是社区/事件热点，必须单独审查。"
+    },
+    "context_risk_sample": {
+      "type": "object",
+      "required": ["size", "included_risk_flags"],
+      "properties": {
+        "size": { "type": "integer", "description": "上下文风险样本量" },
+        "included_risk_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "覆盖的风险标记列表（取自 Step 0 的 context_risk_flags）"
+        }
+      },
+      "description": "上下文风险样本：包含高风险表达（如 doge/哈哈/笑/偷笑/笑哭/评论区/弹幕/粉丝/名人/活动机制/平台标记）的文本。用于验证平台/社区/活动信号是否被误归为品牌信号。"
+    },
+    "primary_candidate_sample": {
+      "type": "object",
+      "required": ["size", "criteria"],
+      "properties": {
+        "size": { "type": "integer", "description": "主落点候选样本量" },
+        "criteria": { "type": "string", "description": "主落点候选文本的筛选条件（如明确提及品牌评价的文本）" }
+      },
+      "description": "主落点候选样本：可能直接支撑品牌主落点的高质量文本。（可选，可在 Step 4 编码后补充）"
+    },
+    "full_coding_subsets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "count": { "type": "integer" },
+          "reason": { "type": "string" }
+        }
+      },
+      "description": "全量编码的子集列表（高互动/高争议等）"
+    },
+    "excluded_records": {
+      "type": "integer",
+      "description": "因去重、无效数据等排除的记录数"
+    },
+    "rationale": {
+      "type": "string",
+      "description": "策略选择理由及抽样误差对结论置信度的影响评估"
+    }
+  }
+}

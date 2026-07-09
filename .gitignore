@@ -1,0 +1,33 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+venv/
+env/
+.env
+.env.*
+*.log
+
+# Generated outputs and local runs
+work/
+output/
+outputs/
+dist/
+build/
+*.html.tmp
+
+# Client/source datasets
+*.csv
+*.xlsx
+*.xls
+*.tsv
+
+# Large generated deliverables
+*.pptx
+*.key
+*.pdf
+
+# Local/private material
+_internal/
+private/
+secrets/

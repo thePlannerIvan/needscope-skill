@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "03_object_filter",
+  "description": "Step 3: 对象相关性过滤合约（v3 — 11 类对象关系）",
+  "type": "object",
+  "required": [
+    "total_checked",
+    "object_related_count",
+    "non_object_count",
+    "low_confidence_count",
+    "relation_type_distribution",
+    "gate_result",
+    "gate_samples"
+  ],
+  "properties": {
+    "total_checked": {
+      "type": "integer",
+      "description": "总检查文本数"
+    },
+    "object_related_count": {
+      "type": "integer",
+      "description": "与对象相关的文本数（过滤后进入编码）"
+    },
+    "non_object_count": {
+      "type": "integer",
+      "description": "与对象无关的文本数"
+    },
+    "low_confidence_count": {
+      "type": "integer",
+      "description": "不确定的文本数"
+    },
+    "relation_type_distribution": {
+      "type": "object",
+      "required": [
+        "brand_owned_related",
+        "product_related",
+        "product_line_related",
+        "campaign_related",
+        "founder_or_celebrity_related",
+        "content_related",
+        "community_context",
+        "platform_context",
+        "category_context",
+        "competitor_context",
+        "non_related"
+      ],
+      "properties": {
+        "brand_owned_related": { "type": "number", "description": "品牌自有相关：文本直接评价品牌整体（品牌名、品牌形象、品牌资产）" },
+        "product_related": { "type": "number", "description": "产品相关：文本评价具体产品/SKU（产品名、型号、使用体验）" },
+        "product_line_related": { "type": "number", "description": "产品线相关：文本评价某条产品线/系列" },
+        "campaign_related": { "type": "number", "description": "活动/营销战役相关：文本评价限时联名/活动/campaign（可分析但不进入品牌主定位）" },
+        "founder_or_celebrity_related": { "type": "number", "description": "创始人/名人相关：文本评价创始人或品牌代言人（可分析但不进入品牌主定位）" },
+        "content_related": { "type": "number", "description": "内容相关：文本评价内容/视频/作品本身" },
+        "community_context": { "type": "number", "description": "社区语境：粉丝互动、玩梗、圈内文化、评论区氛围（不可进入品牌主定位）" },
+        "platform_context": { "type": "number", "description": "平台语境：平台风气、弹幕文化、平台用户特征（不可进入品牌主定位）" },
+        "category_context": { "type": "number", "description": "品类语境：泛品类/行业讨论，未指向具体分析对象" },
+        "competitor_context": { "type": "number", "description": "竞品语境：纯粹讨论竞品，未落脚到分析对象" },
+        "non_related": { "type": "number", "description": "其他无关：完全不相关的内容" }
+      },
+      "description": "11 类对象关系的详细分布。campaign_related、community_context、platform_context 可被分析但默认不得进入品牌主定位。"
+    },
+    "gate_result": {
+      "type": "string",
+      "enum": ["pass", "fail", "partial_rerun_required"],
+      "description": "Gate 结果"
+    },
+    "gate_samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "judgment", "relation_type", "category"],
+        "properties": {
+          "text": { "type": "string", "description": "原文" },
+          "judgment": { "type": "string", "enum": ["related", "non_related", "low_confidence"] },
+          "relation_type": {
+            "type": "string",
+            "enum": [
+              "brand_owned_related",
+              "product_related",
+              "product_line_related",
+              "campaign_related",
+              "founder_or_celebrity_related",
+              "content_related",
+              "community_context",
+              "platform_context",
+              "category_context",
+              "competitor_context",
+              "non_related",
+              ""
+            ],
+            "description": "11 类对象关系类型。related 文本填写具体类型，non_related 可填空字符串"
+          },
+          "category": { "type": "string", "description": "误判分类标记" },
+          "is_error": { "type": "boolean", "description": "是否为误判" },
+          "correction": { "type": "string", "description": "如误判，正确判断是什么" }
+        }
+      },
+      "minItems": 30
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "误判趋势或边界风险提示。Gate 样本必须同时包含 included 和 excluded 的边界案例。"
+    }
+  }
+}

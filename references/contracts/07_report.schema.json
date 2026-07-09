@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "07_report",
+  "description": "Step 7: 报告生成合约（v3 — 新首屏顺序 + 六原型柱状图约束）",
+  "type": "object",
+  "required": [
+    "report_status",
+    "required_contracts_checked",
+    "report_files",
+    "sections_included",
+    "six_archetype_bars_location",
+    "six_archetype_bars_segmented_by_owner",
+    "first_screen_order_compliant",
+    "confidence_disclosure",
+    "data_gap_section_required"
+  ],
+  "properties": {
+    "report_status": {
+      "type": "string",
+      "enum": ["formal_report", "pre_analysis_only"],
+      "description": "formal_report requires 03/04/05/06 contracts; pre_analysis_only is used when the contract chain is incomplete"
+    },
+    "required_contracts_checked": {
+      "type": "object",
+      "required": ["03_object_filter", "04_archetype_coding", "05_quality_gate", "06_positioning"],
+      "properties": {
+        "03_object_filter": { "type": "boolean" },
+        "04_archetype_coding": { "type": "boolean" },
+        "05_quality_gate": { "type": "boolean" },
+        "06_positioning": { "type": "boolean" }
+      },
+      "description": "Whether the mandatory v2 contracts were present and checked before report generation"
+    },
+    "report_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "format"],
+        "properties": {
+          "path": { "type": "string", "description": "文件路径" },
+          "format": { "type": "string", "enum": ["md", "html", "pre_analysis"] },
+          "size_bytes": { "type": "integer", "description": "文件大小" }
+        }
+      },
+      "minItems": 1,
+      "description": "生成的报告文件列表"
+    },
+    "sections_included": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "data_context_confidence",
+          "analysis_object_type",
+          "owned_vs_context_signals",
+          "primary_positioning",
+          "secondary_tension",
+          "noise_and_excluded_signals",
+          "category_competitive_map",
+          "brand_expression_vs_perception",
+          "product_line_division",
+          "strategic_recommendations",
+          "data_gaps_next_steps"
+        ]
+      },
+      "minItems": 1,
+      "description": "报告中包含的章节列表"
+    },
+    "six_archetype_bars_location": {
+      "type": "string",
+      "enum": ["appendix_only", "evidence_section_not_first", "not_present"],
+      "description": "v3: 六原型条形图位置。appendix_only=仅在附录中出现；evidence_section_not_first=在证据章节但不是首位视觉；not_present=未包含六原型条形图。不得设置为 'first_visual' 或 'main_visual'。"
+    },
+    "six_archetype_bars_segmented_by_owner": {
+      "type": "boolean",
+      "description": "v3: 六原型条形图是否按 signal_owner（owned vs context）分段显示。true=分段展示；false=未分段（应避免）。"
+    },
+    "first_screen_order_compliant": {
+      "type": "boolean",
+      "description": "v3: 报告首屏是否遵循 v3 顺序：(1) 品牌人格能否判定说明；(2) 主落点或'未判定'；(3) 自有信号 vs 语境信号；(4) 置信度上限和数据限制；(5) 之后才是证据细节。如果为 false，说明报告结构不符合 v3 要求。"
+    },
+    "confidence_disclosure": {
+      "type": "string",
+      "description": "整体置信度的公开说明文本"
+    },
+    "data_gap_section_required": {
+      "type": "boolean",
+      "description": "是否需要数据补充建议章节（探索级/方向级报告必须为 true）"
+    },
+    "owned_context_split_disclosed": {
+      "type": "boolean",
+      "description": "Whether the report explicitly separates brand/product/product_line signals from context/platform/community signals"
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "报告中标注的警告或边界说明。如伪造/不支持的结论风险。"
+    }
+  }
+}

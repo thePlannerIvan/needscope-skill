@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "01_scope_decision",
+  "description": "Step 1: 分析范围与路径确认合约",
+  "type": "object",
+  "required": [
+    "layers_to_run",
+    "accepted_confidence_limit",
+    "coding_budget_mode",
+    "analysis_lens",
+    "shadow_analysis_allowed",
+    "approved_to_continue"
+  ],
+  "properties": {
+    "layers_to_run": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["A", "B", "C"] },
+      "minItems": 1,
+      "description": "用户确认要跑的层级列表"
+    },
+    "accepted_confidence_limit": {
+      "type": "string",
+      "enum": ["decision", "directional", "exploratory_usable", "exploratory_thin", "accepted_with_disclaimer"],
+      "description": "用户是否接受当前数据能支持的最高置信度"
+    },
+    "coding_budget_mode": {
+      "type": "string",
+      "enum": ["conservative", "balanced", "exhaustive"],
+      "description": "编码预算模式：conservative=优先节省token，balanced=权衡，exhaustive=数据质量优先"
+    },
+    "analysis_lens": {
+      "type": "string",
+      "enum": ["brand_positioning", "founder_shadow", "content_ip_shadow", "mixed_with_guardrails"],
+      "description": "分析主口径。涉及 founder/public_person/content_ip 时必须明确；品牌主落点证据仍只允许 brand/product/product_line。"
+    },
+    "shadow_analysis_allowed": {
+      "type": "boolean",
+      "description": "是否允许 founder/content 旁路画像。即使为 true，旁路信号也不得进入 primary_evidence_items 或 supporting_evidence_items。"
+    },
+    "user_constraints": {
+      "type": "string",
+      "description": "用户的额外约束或特殊要求（如只看某个维度、只分析指定层级）"
+    },
+    "approved_to_continue": {
+      "type": "boolean",
+      "description": "用户是否同意继续分析"
+    }
+  }
+}

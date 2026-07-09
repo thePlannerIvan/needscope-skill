@@ -1,0 +1,258 @@
+{
+  "skill": "needscope",
+  "purpose": "Validate the upgraded Needscope v3 workflow against the main failure modes found in the Adidas/Nike eval and against ordinary brand analysis needs.",
+  "evals": [
+    {
+      "id": "ordinary_brand_comments_primary_positioning",
+      "prompt": "这里有一个护肤品牌的小红书评论和竞品评论，帮我做 NeedScope 品牌人格分析，看它在消费者心智里落在哪个位置。",
+      "files": [
+        "sample_brand_comments.csv",
+        "sample_competitor_comments.csv"
+      ],
+      "expected_behavior_change": "Agent should run data inventory, confirm supported layers, then diagnose primary/secondary NeedScope position instead of producing a six-archetype strengths-and-weaknesses checklist.",
+      "assertions": [
+        "Starts with data source and object type inventory (Step 0).",
+        "Identifies analysis_object_type as brand.",
+        "Records 00_data_inventory contract before proceeding.",
+        "Asks or records scope decision (Step 1) before deep analysis unless user already explicitly requested all layers.",
+        "Records 01_scope_decision contract with approved_to_continue=true.",
+        "Final report's first strategic conclusion is primary NeedScope positioning (not a six-archetype table).",
+        "Report distinguishes between low-score, absent-signal, negative-gap, and platform-noise archetypes.",
+        "Does not recommend filling all six archetypes."
+      ]
+    },
+    {
+      "id": "fan_platform_vs_public_discussion",
+      "prompt": "我有 B站粉丝评论和小红书路人讨论，想看这个品牌/创始人的 NeedScope 认知差异。",
+      "files": [
+        "bilibili_comments.json",
+        "xhs_discussion.csv"
+      ],
+      "expected_behavior_change": "Agent should separate platform contexts and should not merge fan-field signals with public perception signals into one flat score.",
+      "assertions": [
+        "Platform contexts are identified separately in Step 0 data inventory.",
+        "Labels B站 as fan/community or content-consumption context when appropriate.",
+        "Labels 小红书 as public discussion context when appropriate.",
+        "Uses platform_splits in 06_positioning contract when signals diverge.",
+        "Calculates or explains platform-level splits before any combined conclusion.",
+        "Warns that fan-field perception is not equal to mass-market consumer mindshare.",
+        "Reports cognitive splits as a finding when supported."
+      ]
+    },
+    {
+      "id": "founder_content_ip_boundary",
+      "prompt": "帮我分析 Tim/影视飓风的 NeedScope，数据是视频评论和社交平台讨论。",
+      "files": [
+        "tim_bilibili_comments.json",
+        "tim_xhs_comments.csv"
+      ],
+      "expected_behavior_change": "Agent should identify the object as a mixed founder/public_person/content_ip/brand case and explicitly state interpretation boundaries.",
+      "assertions": [
+        "analysis_object_type is not reduced to ordinary brand only (uses 'mixed' or multiple types).",
+        "01_scope_decision records analysis_lens and shadow_analysis_allowed for mixed founder/content-IP cases.",
+        "Signals are encoded with correct signal_owner (founder/content/brand/community).",
+        "founder/content signals have asset_eligibility=context_only or exclude_from_positioning, not primary_eligible or secondary_only.",
+        "Distinguishes founder persona, content brand, company brand, and community signals.",
+        "Founder/content observations are shown as shadow_analysis or platform_splits, not as brand primary/supporting evidence.",
+        "Uses Tim lessons as guardrails but does not turn Tim report structure into the default template.",
+        "Does not treat platform meme culture as founder personality without signal_owner qualification.",
+        "Report explicitly states interpretation boundaries for mixed object types."
+      ]
+    },
+    {
+      "id": "platform_meme_not_brand_joy",
+      "prompt": "这些评论里很多人在玩梗，说评论区太好笑了。帮我看这个品牌是不是愉悦型很强。",
+      "files": [
+        "meme_heavy_comments.csv"
+      ],
+      "expected_behavior_change": "Agent should code meme/playful comments with signal_owner community or platform unless the text directly attributes joy to the brand/product/founder.",
+      "assertions": [
+        "Uses signal_owner for each archetype signal (04_archetype_coding).",
+        "Separates community joy (signal_owner=community) from brand joy (signal_owner=brand).",
+        "Does not conclude that brand primary archetype is 愉悦型 solely because platform comments are playful.",
+        "Explains whether 愉悦型 is core_identity, supporting_asset, or contextual_noise.",
+        "Object filter (Step 3) correctly filters non-related community playfulness.",
+        "Report notes platform/community noise in 06_positioning noise_archetypes."
+      ]
+    },
+    {
+      "id": "negative_absence_polarity",
+      "prompt": "评论里很多人说这个品牌一点都不松弛、很紧绷、没有生活感。帮我做 NeedScope 编码。",
+      "files": [
+        "negative_belonging_comments.csv"
+      ],
+      "expected_behavior_change": "Agent should encode this as 归属型 negative or related absence, not as positive belonging signal.",
+      "assertions": [
+        "Sentiment is defined as whether the object has or lacks the archetype trait.",
+        "紧绷/不松弛/没有生活感 are not counted as 归属型 positive.",
+        "04_archetype_coding contract shows negative sentiment counts for affected archetypes.",
+        "Report distinguishes negative gap from low or absent signal.",
+        "Negative_gaps are recorded in 06_positioning contract.",
+        "If using scores, negative density is shown separately from positive density."
+      ]
+    },
+    {
+      "id": "large_dataset_sampling_strategy",
+      "prompt": "这里有 8 万条评论，帮我全量做 NeedScope 分析。",
+      "files": [
+        "large_comments_80000.csv"
+      ],
+      "expected_behavior_change": "Agent should not default to full LLM sentence-by-sentence coding. It should design sampling, clustering, dedupe, and targeted coding strategy before semantic coding.",
+      "assertions": [
+        "Creates a sampling plan (02_sampling_plan contract) before coding.",
+        "sampling_mode is not 'full' for 80k records.",
+        "Explains why full sentence-by-sentence LLM coding is not the default.",
+        "Uses stratification by platform/topic/product line/time/engagement when available.",
+        "Specifies which subsets get full coding and which get sampled coding.",
+        "Records dedupe_strategy and excluded_records in contract.",
+        "Keeps quality gates (Step 3 and Step 5) after filtering and coding."
+      ]
+    },
+    {
+      "id": "official_content_only_confidence_limit",
+      "prompt": "这是品牌官方号过去一年的标题和正文，帮我看消费者怎么看这个品牌。",
+      "files": [
+        "official_posts.csv"
+      ],
+      "expected_behavior_change": "Agent should warn that official content reveals brand self-expression, not consumer perception, and should cap confidence accordingly.",
+      "assertions": [
+        "Identifies data source as official self-expression (platform_context=official_expression).",
+        "max_confidence_level is capped at directional or lower in 00_data_inventory.",
+        "Does not claim to know consumer actual feelings from official posts alone.",
+        "Caps report at directional or exploratory confidence.",
+        "Includes data_gap_section_required=true in 07_report contract.",
+        "Suggests needed consumer-side data to upgrade confidence."
+      ]
+    },
+    {
+      "id": "v2_contract_chain_completeness",
+      "prompt": "帮我做这个运动品牌的 NeedScope 分析，数据在附件里。",
+      "files": [
+        "sample_brand_comments.csv",
+        "sample_competitor_comments.csv"
+      ],
+      "expected_behavior_change": "Agent should follow the complete v2 contract chain from Step 0 through Step 7, writing each contract before proceeding.",
+      "assertions": [
+        "Writes 00_data_inventory contract (analysis_object_type, data_sources, platform_contexts, supported_layers, max_confidence_level).",
+        "Writes 01_scope_decision contract (layers_to_run, approved_to_continue).",
+        "Writes 02_sampling_plan contract (total_records, sampling_mode, sample_sizes, random_sample, high_like_sample, context_risk_sample).",
+        "Writes 03_object_filter contract (gate_result with samples, relation_type_distribution with 11 types).",
+        "Writes 04_archetype_coding contract (archetype_signal_counts, sentiment_counts, signal_owner_distribution, asset_eligibility).",
+        "Writes 05_quality_gate contract (gate_result, critical_errors, random_review, high_like_review, context_risk_review, primary_evidence_review, supporting_evidence_review).",
+        "Writes 06_positioning contract (primary_archetype, confidence, primary_evidence_items, insufficient_owned_signal_reason).",
+        "Writes 07_report contract (report_files, sections_included, confidence_disclosure, six_archetype_bars_location, first_screen_order_compliant).",
+        "Gate failures (03 or 05) stop progress until resolved."
+      ]
+    },
+    {
+      "id": "v2_gate_failure_handling",
+      "prompt": "这些评论很多在玩梗、比较平台，帮我分析这个品牌的 NeedScope。",
+      "files": [
+        "meme_heavy_comments.csv"
+      ],
+      "expected_behavior_change": "If object filter or coding quality gate fails significantly, Agent should stop and request user input rather than proceeding to report.",
+      "assertions": [
+        "If Step 3 gate_result is 'fail', does not proceed to Step 4.",
+        "If Step 5 gate_result is 'fail_rerun', records patch_instructions before rerun.",
+        "If gate failed, informs user about the issue and requested decision.",
+        "Partial rerun is limited to affected subsets, not full dataset."
+      ]
+    },
+    {
+      "id": "v3_sampling_plan_completeness",
+      "prompt": "帮我分析这些消费者评论的品牌原型，数据大概 3000 条。",
+      "files": [
+        "moderate_comments_3000.csv"
+      ],
+      "expected_behavior_change": "Agent should include all four v3 sample types in the sampling plan.",
+      "assertions": [
+        "02_sampling_plan includes random_sample with size and selection_method.",
+        "02_sampling_plan includes high_like_sample with size and criteria.",
+        "02_sampling_plan includes context_risk_sample with size and included_risk_flags.",
+        "Does not claim quality review based only on random sampling.",
+        "Context risk sample covers Step 0 context_risk_flags."
+      ]
+    },
+    {
+      "id": "v3_asset_eligibility_enforcement",
+      "prompt": "这里有一批含大量狗头/哈哈/评论区玩梗的评论。帮我分析这个品牌的 NeedScope 人格。",
+      "files": [
+        "meme_heavy_comments.csv"
+      ],
+      "expected_behavior_change": "Agent must enforce asset_eligibility and not let meme-driven joy enter brand primary positioning.",
+      "assertions": [
+        "04_archetype_coding coded_items include asset_eligibility and eligibility_reason.",
+        "No meme-driven item has asset_eligibility=primary_eligible.",
+        "signal_role=contextual_noise items do not have asset_eligibility=primary_eligible.",
+        "No founder/content/campaign/community/platform/category/competitor item has asset_eligibility=primary_eligible or secondary_only.",
+        "05_quality_gate includes primary_evidence_review section with all primary_eligible items checked and supporting_evidence_review for secondary_only owned signals.",
+        "06_positioning primary_evidence_items only contain items with asset_eligibility=primary_eligible AND signal_owner in brand/product/product_line AND signal_role!=contextual_noise.",
+        "06_positioning supporting_evidence_items only contain items with asset_eligibility=secondary_only AND signal_owner in brand/product/product_line AND signal_role!=contextual_noise.",
+        "evidence_basis_counts primary/supporting counts match the actual evidence array lengths.",
+        "If primary_archetype is influenced by community/platform joy, flag is raised."
+      ]
+    },
+    {
+      "id": "v3_first_screen_order",
+      "prompt": "帮我做这个品牌的 NeedScope 全分析，输出 Markdown 和 HTML 报告。",
+      "files": [
+        "sample_brand_comments.csv",
+        "sample_competitor_comments.csv"
+      ],
+      "expected_behavior_change": "Report's first screen must follow v3 order: brand personality assessment first, then archetype/未判定, then owned vs context split, then confidence limits, then evidence detail.",
+      "assertions": [
+        "07_report contract declares first_screen_order_compliant=true.",
+        "07_report contract declares six_archetype_bars_location=appendix_only or evidence_section_not_first.",
+        "07_report contract declares six_archetype_bars_segmented_by_owner=true.",
+        "Report opening does not show six-archetype bars as first or main visual.",
+        "HTML first screen immediately shows primary archetype or 未判定 before bars.",
+        "HTML first screen shows owned vs context split before evidence detail.",
+        "Contextual noise items use muted styling, not asset-card styling."
+      ]
+    },
+    {
+      "id": "adidas_nike_worldcup_context_noise_regression",
+      "prompt": "用 Adidas 和 Nike 的世界杯小红书评论数据做 NeedScope 对比分析，输出 Markdown 和 HTML。",
+      "files": [
+        "Adidas_世界杯小红书评论区讨论.csv",
+        "Nike_世界杯小红书评论区讨论.csv",
+        "世界杯双品牌_近两周Top200_笔记+评论数据集.xlsx"
+      ],
+      "expected_behavior_change": "Agent must not repeat the failed keyword-based Adidas/Nike evaluation. It must run the v3 contract chain and separate brand-owned signals from platform/event/community signals before reporting.",
+      "assertions": [
+        "Does not generate formal report.md/report.html unless 03_object_filter, 04_archetype_coding, 05_quality_gate, and 06_positioning contracts exist.",
+        "Does not use keyword frequency or emoji frequency as the final scoring method.",
+        "Does not use the stale data_analysis.log keyword results as formal evidence.",
+        "Comments driven by doge/哈哈/笑/偷笑/笑哭/赛事梗/评论区/弹幕/粉丝 are labeled community/platform/event/fan context by Step 3 relation_type, not brand-owned.",
+        "Comments mentioning Li Xian / Li Yuchun / C Ronaldo fan interactions or concert/campaign interactions are labeled campaign_related or founder_or_celebrity_related or community_context, not brand_owned_related.",
+        "Each coded item has asset_eligibility and eligibility_reason (04_archetype_coding).",
+        "Brand primary_archetype is based only on signal_owner=brand/product/product_line AND asset_eligibility=primary_eligible.",
+        "If brand/product/product_line owned signals are insufficient, primary_archetype is 未判定 rather than forced to 愉悦型.",
+        "primary_evidence_items in 06_positioning each cite asset_eligibility=primary_eligible.",
+        "If 愉悦型 is high mainly because of platform or event signals, it appears in context_signal_summary/noise_archetypes, not as a brand core asset.",
+        "High-like quotes shown in the report include signal_owner, asset_eligibility, and signal_role.",
+        "HTML first screen separates owned signals from context/platform/community signals before any six-archetype chart.",
+        "Six-archetype bars, if present, appear only as evidence appendix and are segmented or explained by signal_owner.",
+        "Specific failures caught: '我亲手盖上的[doge]' cannot pass as brand/high/supporting_asset with asset_eligibility=primary_eligible.",
+        "Specific failures caught: '李宇春7.4广州场演唱会大屏能看到C罗吗？' cannot pass as brand/high/core_identity with asset_eligibility=primary_eligible."
+      ]
+    },
+    {
+      "id": "v3_validator_blocking",
+      "prompt": "帮我做这个运动品牌的 NeedScope 分析，输出 Markdown 和 HTML 报告。（假设合约链不完整）",
+      "files": [
+        "sample_brand_comments.csv",
+        "sample_competitor_comments.csv"
+      ],
+      "expected_behavior_change": "Validator must block report generation when contract chain is incomplete.",
+      "assertions": [
+        "If any alias contract names (04_semantic_coding.json, 06_scoring_positioning.json, 07_report_generation.json) are present, validator flags them.",
+        "If 05_quality_gate is missing critical review groups (random_review, high_like_review, context_risk_review, primary_evidence_review, supporting_evidence_review), validator flags it.",
+        "If 06_positioning primary_evidence_items violate eligibility constraints, validator flags it.",
+        "If 07_report does not declare six_archetype_bars_location and first_screen_order_compliant, validator flags it.",
+        "Validator can be run before report generation.",
+        "Validator failure blocks report.md and report.html generation."
+      ]
+    }
+  ]
+}
