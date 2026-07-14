@@ -87,10 +87,10 @@ references/
   domain/
   contracts/
   templates/
+  archive/
 scripts/
   validate_contract_chain.mjs
 evals/
-planning/
 ```
 
 ## Validation
@@ -102,6 +102,7 @@ node scripts/validate_contract_chain.mjs path/to/work/contracts
 ```
 
 The validator checks contract names, required v3.2 fields, illegal owner-eligibility combinations, `asset_eligibility`, review groups, positioning evidence constraints, evidence count consistency, and report structure.
+The validator checks contract file names, alias contract names, owner-eligibility combinations, review groups, primary/supporting evidence constraints, and report structure. The field reference lives in `references/contracts/contract-definitions.md`.
 
 ## Attribution Boundary
 
@@ -223,10 +224,10 @@ references/
   domain/
   contracts/
   templates/
+  archive/
 scripts/
   validate_contract_chain.mjs
 evals/
-planning/
 ```
 
 ## 验证方式
@@ -240,13 +241,12 @@ node scripts/validate_contract_chain.mjs path/to/work/contracts
 validator 会检查：
 
 - contract 文件名是否正确。
-- 是否使用了 v3.2 必需字段。
+- 是否出现禁用的 legacy alias contract 名。
 - 是否存在非法 owner-eligibility 组合。
-- `asset_eligibility` 是否完整。
 - 五组质量复核是否齐全。
 - 主证据和辅助证据是否符合约束。
-- 证据数组数量是否和 `evidence_basis_counts` 一致。
 - 报告结构是否把六原型条形图放在附录或非首屏位置。
+- 字段定义详见 `references/contracts/contract-definitions.md`。
 
 ## 开源协议与商业合作
 

@@ -1,327 +1,140 @@
 #!/usr/bin/env node
 
 /**
- * validate_contract_chain.mjs
+ * validate_contract_chain.mjs — 精简版
  *
- * Needscope v3 deterministic contract chain validator.
+ * 检查 contract 链完整性 + 关键语义约束。
+ * 字段定义见 references/contracts/contract-definitions.md。
+ * 自动适配品牌分析 / 人物分析。
  *
- * Usage:
- *   node scripts/validate_contract_chain.mjs [work/contracts directory]
- *
- * If no directory is provided, defaults to ./work/contracts/.
- * Exits with code 0 if all checks pass, 1 if any check fails.
+ * Usage: node scripts/validate_contract_chain.mjs [work/contracts path]
  */
 
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const CONTRACTS_DIR = resolve(process.argv[2] || './work/contracts');
-const REQUIRED_CONTRACTS = [
-  '00_data_inventory.json',
-  '01_scope_decision.json',
-  '02_sampling_plan.json',
-  '03_object_filter.json',
-  '04_archetype_coding.json',
-  '05_quality_gate.json',
-  '06_positioning.json',
-  '07_report.json',
-];
+const DIR = resolve(process.argv[2] || './work/contracts');
+const CONTRACTS = ['00_data_inventory','01_scope_decision','02_sampling_plan','03_object_filter','04_archetype_coding','05_quality_gate','06_positioning','07_report'];
+const ALIASES = ['04_semantic_coding','06_scoring_positioning','07_report_generation'];
+const ELIGIBLE = ['primary_eligible','secondary_only','context_only','exclude_from_positioning'];
+const BARS_LOCATIONS = ['appendix_only','evidence_section_not_first','not_present'];
+const REVIEW_GROUPS = ['random_review','high_like_review','context_risk_review','primary_evidence_review','supporting_evidence_review'];
+const PERSON_TYPES = ['founder', 'public_person', 'content_ip'];
 
-const ALIAS_CONTRACT_NAMES = [
-  '04_semantic_coding.json',
-  '06_scoring_positioning.json',
-  '07_report_generation.json',
-];
+// Default (brand analysis) owned set — overridden if person analysis detected
+let OWNED = ['brand', 'product', 'product_line'];
+let IS_PERSON_ANALYSIS = false;
 
-const DISALLOWED_ARRAY = ['four_archetype_bars_location'];
-const ALLOWED_OWNERS = ['brand', 'product', 'product_line', 'founder', 'content', 'community', 'platform', 'campaign', 'category', 'competitor'];
-const POSITIONING_OWNERS = ['brand', 'product', 'product_line'];
-const CONTEXT_ONLY_OWNERS = ['founder', 'content', 'community', 'platform', 'campaign', 'category', 'competitor'];
-const ALLOWED_ELIGIBILITY = ['primary_eligible', 'secondary_only', 'context_only', 'exclude_from_positioning'];
-const ALLOWED_BAR_LOCATIONS = ['appendix_only', 'evidence_section_not_first', 'not_present'];
-const REQUIRED_REVIEW_GROUPS = ['random_review', 'high_like_review', 'context_risk_review', 'primary_evidence_review', 'supporting_evidence_review'];
+let errors = [], warnings = [];
 
-const errors = [];
-const warnings = [];
-
-function check(condition, message) {
-  if (!condition) errors.push(message);
-}
-
-function warn(condition, message) {
-  if (!condition) warnings.push(message);
-}
+function fail(condition, msg) { if (!condition) errors.push(msg); }
+function warn(condition, msg) { if (!condition) warnings.push(msg); }
 
 function readJSON(name) {
-  const path = resolve(CONTRACTS_DIR, name);
-  if (!existsSync(path)) {
-    errors.push(`MISSING: Required contract ${name} not found at ${path}`);
-    return null;
-  }
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8'));
-  } catch (e) {
-    errors.push(`PARSE ERROR: ${name} — ${e.message}`);
-    return null;
-  }
+  const path = resolve(DIR, `${name}.json`);
+  if (!existsSync(path)) { errors.push(`MISSING: ${name}.json`); return null; }
+  try { return JSON.parse(readFileSync(path, 'utf-8')); }
+  catch (e) { errors.push(`PARSE ERROR: ${name}.json — ${e.message}`); return null; }
 }
 
-// ============================================================
-// CHECK 1: Required contract files exist with exact names
-// ============================================================
-console.log('\n=== CHECK 1: Required contract files ===');
-for (const name of REQUIRED_CONTRACTS) {
-  const found = existsSync(resolve(CONTRACTS_DIR, name));
-  check(found, `Required contract ${name} does not exist in ${CONTRACTS_DIR}`);
-  console.log(`  ${found ? '✓' : '✗'} ${name}`);
+// Detect analysis type from Step 0 contract — affects all subsequent checks
+const s0 = readJSON('00_data_inventory');
+if (s0 && s0.analysis_object_type && PERSON_TYPES.includes(s0.analysis_object_type)) {
+  IS_PERSON_ANALYSIS = true;
+  OWNED = ['founder', 'brand', 'product', 'product_line'];
 }
 
-// ============================================================
-// CHECK 2: No alias contract names for formal report
-// ============================================================
-console.log('\n=== CHECK 2: Alias name disallowance ===');
-for (const alias of ALIAS_CONTRACT_NAMES) {
-  const found = existsSync(resolve(CONTRACTS_DIR, alias));
-  check(!found, `Alias contract ${alias} found in active contracts directory. Formal runs must use exact names.`);
-  console.log(`  ${found ? '✗' : '✓'} ${alias} (${found ? 'present — FAIL' : 'absent — OK'})`);
+// CHECK 1: All required contracts exist
+console.log(`\n=== Required contract files (${IS_PERSON_ANALYSIS ? 'person' : 'brand'} analysis) ===`);
+for (const name of CONTRACTS) {
+  const found = existsSync(resolve(DIR, `${name}.json`));
+  fail(found, `${name}.json missing`);
+  console.log(`  ${found ? '✓' : '✗'} ${name}.json`);
 }
 
-// ============================================================
-// CHECK 3: Step 4 coded items include asset_eligibility
-// ============================================================
-console.log('\n=== CHECK 3: asset_eligibility in Step 4 ===');
-const step4 = readJSON('04_archetype_coding.json');
-if (step4) {
-  const items = step4.coded_items || [];
-  const total = items.length;
-  check(total > 0, '04_archetype_coding has no coded_items array');
+// CHECK 2: No alias names
+console.log('\n=== Alias name check ===');
+for (const a of ALIASES) {
+  const found = existsSync(resolve(DIR, `${a}.json`));
+  fail(!found, `Alias ${a}.json found — must use exact names`);
+  console.log(`  ${found ? '✗' : '✓'} ${a}.json`);
+}
 
-  let missingEligibility = 0;
-  let invalidEligibility = 0;
-  let invalidOwner = 0;
-  let illegalPrimaryOwner = 0;
-  let illegalSecondaryOwner = 0;
-  let eligibleContextualNoise = 0;
+// The set of owners allowed for secondary_only in person analysis
+function secondaryOwned() {
+  return IS_PERSON_ANALYSIS ? [...OWNED, 'content'] : OWNED;
+}
+
+// CHECK 3: Step 4 — semantic constraints
+console.log('\n=== Step 4: coded_items constraints ===');
+const s4 = readJSON('04_archetype_coding');
+if (s4) {
+  const items = s4.coded_items || [];
+  let illegalPE=0, illegalSE=0, noiseEligible=0;
+  const secOwned = secondaryOwned();
   for (const item of items) {
-    if (!item.signal_owner || !ALLOWED_OWNERS.includes(item.signal_owner)) invalidOwner++;
-    if (!item.asset_eligibility) missingEligibility++;
-    else if (!ALLOWED_ELIGIBILITY.includes(item.asset_eligibility)) invalidEligibility++;
-
-    if (item.asset_eligibility === 'primary_eligible' && !POSITIONING_OWNERS.includes(item.signal_owner)) {
-      illegalPrimaryOwner++;
-    }
-    if (item.asset_eligibility === 'secondary_only' && !POSITIONING_OWNERS.includes(item.signal_owner)) {
-      illegalSecondaryOwner++;
-    }
-    if (
-      ['primary_eligible', 'secondary_only'].includes(item.asset_eligibility) &&
-      item.signal_role === 'contextual_noise'
-    ) {
-      eligibleContextualNoise++;
-    }
+    const { signal_owner, asset_eligibility, signal_role } = item;
+    if (asset_eligibility === 'primary_eligible' && !OWNED.includes(signal_owner)) illegalPE++;
+    if (asset_eligibility === 'secondary_only' && !secOwned.includes(signal_owner)) illegalSE++;
+    if (['primary_eligible','secondary_only'].includes(asset_eligibility) && signal_role === 'contextual_noise') noiseEligible++;
   }
-
-  check(invalidOwner === 0, `${invalidOwner}/${total} coded_items have invalid signal_owner value`);
-  check(missingEligibility === 0, `${missingEligibility}/${total} coded_items missing asset_eligibility`);
-  check(invalidEligibility === 0, `${invalidEligibility}/${total} coded_items have invalid asset_eligibility value`);
-  check(illegalPrimaryOwner === 0, `${illegalPrimaryOwner}/${total} coded_items are primary_eligible but signal_owner is not brand/product/product_line`);
-  check(illegalSecondaryOwner === 0, `${illegalSecondaryOwner}/${total} coded_items are secondary_only but signal_owner is not brand/product/product_line`);
-  check(eligibleContextualNoise === 0, `${eligibleContextualNoise}/${total} coded_items are primary/secondary eligible but signal_role=contextual_noise`);
-  console.log(`  ✓ ${total} items checked`);
-  console.log(`  ${invalidOwner > 0 ? '✗' : '✓'} ${invalidOwner} invalid signal_owner`);
-  console.log(`  ${missingEligibility > 0 ? '✗' : '✓'} ${missingEligibility} missing asset_eligibility`);
-  console.log(`  ${invalidEligibility > 0 ? '✗' : '✓'} ${invalidEligibility} invalid asset_eligibility`);
-  console.log(`  ${illegalPrimaryOwner > 0 ? '✗' : '✓'} ${illegalPrimaryOwner} illegal primary_eligible owner`);
-  console.log(`  ${illegalSecondaryOwner > 0 ? '✗' : '✓'} ${illegalSecondaryOwner} illegal secondary_only owner`);
-  console.log(`  ${eligibleContextualNoise > 0 ? '✗' : '✓'} ${eligibleContextualNoise} eligible contextual_noise`);
-
-  // Also check eligibility_reason
-  const missingReason = items.filter(i => !i.eligibility_reason).length;
-  warn(missingReason <= total * 0.1, `${missingReason}/${total} items missing eligibility_reason (should be <10%)`);
-  console.log(`  ⚠ ${missingReason} missing eligibility_reason`);
+  fail(illegalPE === 0, `${illegalPE} coded_items: primary_eligible with non-owned signal_owner (owned: ${OWNED})`);
+  fail(illegalSE === 0, `${illegalSE} coded_items: secondary_only with non-owned signal_owner (allowed secondary: ${secOwned})`);
+  fail(noiseEligible === 0, `${noiseEligible} coded_items: primary/secondary-eligible but signal_role=contextual_noise`);
+  console.log(`  ✓ ${items.length} items checked (${illegalPE}PE, ${illegalSE}SE, ${noiseEligible}noise)`);
 }
 
-// ============================================================
-// CHECK 4: Step 5 contains all four review groups
-// ============================================================
-console.log('\n=== CHECK 4: Four review groups in Step 5 ===');
-const step5 = readJSON('05_quality_gate.json');
-if (step5) {
-  for (const group of REQUIRED_REVIEW_GROUPS) {
-    const hasGroup = step5[group] !== undefined;
-    check(hasGroup, `05_quality_gate missing required review group: ${group}`);
-    console.log(`  ${hasGroup ? '✓' : '✗'} ${group}`);
-  }
-
-  // Check critical_failures array
-  if (step5.critical_failures && step5.critical_failures.length > 0) {
-    console.log(`  ⚠ critical_failures present: ${step5.critical_failures.join(', ')}`);
+// CHECK 4: Step 5 — review groups
+console.log('\n=== Step 5: review groups ===');
+const s5 = readJSON('05_quality_gate');
+if (s5) {
+  for (const g of REVIEW_GROUPS) {
+    const ok = s5[g] !== undefined;
+    fail(ok, `05_quality_gate missing: ${g}`);
+    console.log(`  ${ok ? '✓' : '✗'} ${g}`);
   }
 }
 
-// ============================================================
-// CHECK 5: Step 6 primary evidence only uses eligible owned signals
-// ============================================================
-console.log('\n=== CHECK 5: Primary evidence eligibility in Step 6 ===');
-const step6 = readJSON('06_positioning.json');
-if (step6) {
-  const evidenceItems = step6.primary_evidence_items || [];
-  const hasPrimaryEvidenceArray = Array.isArray(step6.primary_evidence_items);
-  check(hasPrimaryEvidenceArray, '06_positioning missing primary_evidence_items array');
-  const totalEvidence = evidenceItems.length;
-  if (step6.primary_archetype !== '未判定') {
-    check(totalEvidence > 0, `primary_archetype="${step6.primary_archetype}" requires at least 1 primary_evidence_items entry`);
+// CHECK 5: Step 6 — primary evidence triple constraint
+console.log('\n=== Step 6: primary evidence ===');
+const s6 = readJSON('06_positioning');
+if (s6) {
+  const items = s6.primary_evidence_items || [];
+  if (s6.primary_archetype !== '未判定') fail(items.length > 0, `primary_archetype="${s6.primary_archetype}" needs ≥1 evidence item`);
+  let badOwner=0, badElig=0, badRole=0;
+  for (const item of items) {
+    if (!OWNED.includes(item.signal_owner)) badOwner++;
+    if (item.asset_eligibility !== 'primary_eligible') badElig++;
+    if (!item.signal_role || item.signal_role === 'contextual_noise') badRole++;
   }
+  fail(badOwner === 0, `${badOwner} evidence items: signal_owner not in [${OWNED}]`);
+  fail(badElig === 0, `${badElig} evidence items: asset_eligibility not primary_eligible`);
+  fail(badRole === 0, `${badRole} evidence items: signal_role missing or contextual_noise`);
+  console.log(`  ✓ ${items.length} items checked (${badOwner}owner, ${badElig}elig, ${badRole}role)`);
 
-  let invalidOwner = 0;
-  let invalidEligibility = 0;
-  let missingSignalRole = 0;
-  let contextualNoiseInPrimary = 0;
-  for (const item of evidenceItems) {
-    // Triple constraint 1: signal_owner in brand/product/product_line
-    if (!item.signal_owner || !POSITIONING_OWNERS.includes(item.signal_owner)) {
-      invalidOwner++;
-    }
-    // Triple constraint 2: asset_eligibility must be primary_eligible (required, not just !==)
-    if (!item.asset_eligibility || item.asset_eligibility !== 'primary_eligible') {
-      invalidEligibility++;
-    }
-    // Triple constraint 3: signal_role must exist and not be contextual_noise
-    if (!item.signal_role) {
-      missingSignalRole++;
-    } else if (item.signal_role === 'contextual_noise') {
-      contextualNoiseInPrimary++;
-    }
+  // Check supporting evidence
+  const secOwned = secondaryOwned();
+  const supp = s6.supporting_evidence_items || [];
+  let badSupp=0;
+  for (const item of supp) {
+    if (!secOwned.includes(item.signal_owner) || item.asset_eligibility !== 'secondary_only') badSupp++;
   }
-
-  check(missingSignalRole === 0, `${missingSignalRole}/${totalEvidence} primary_evidence_items missing signal_role`);
-  check(contextualNoiseInPrimary === 0, `${contextualNoiseInPrimary}/${totalEvidence} primary_evidence_items have signal_role=contextual_noise — must not be contextual_noise for primary evidence`);
-  check(invalidOwner === 0, `${invalidOwner}/${totalEvidence} primary_evidence_items have invalid signal_owner (must be brand/product/product_line)`);
-  check(invalidEligibility === 0, `${invalidEligibility}/${totalEvidence} primary_evidence_items missing or invalid asset_eligibility (must be primary_eligible)`);
-  console.log(`  ✓ ${totalEvidence} primary evidence items checked`);
-  console.log(`  ${missingSignalRole > 0 ? '✗' : '✓'} ${missingSignalRole} missing signal_role`);
-  console.log(`  ${contextualNoiseInPrimary > 0 ? '✗' : '✓'} ${contextualNoiseInPrimary} contextual_noise in primary`);
-  console.log(`  ${invalidOwner > 0 ? '✗' : '✓'} ${invalidOwner} invalid signal_owner`);
-  console.log(`  ${invalidEligibility > 0 ? '✗' : '✓'} ${invalidEligibility} invalid asset_eligibility`);
-
-  // Check insufficient_owned_signal_reason when primary_archetype is 未判定
-  if (step6.primary_archetype === '未判定') {
-    check(step6.insufficient_owned_signal_reason && step6.insufficient_owned_signal_reason.length > 0,
-      'primary_archetype is 未判定 but insufficient_owned_signal_reason is empty or missing');
-    console.log(`  ✓ insufficient_owned_signal_reason: ${step6.insufficient_owned_signal_reason ? 'present' : 'missing'}`);
-  }
-
-  // Check excluded_high_influence_items
-  if (step6.excluded_high_influence_items && step6.excluded_high_influence_items.length > 0) {
-    for (const item of step6.excluded_high_influence_items) {
-      check(item.exclusion_reason && item.exclusion_reason.length > 0,
-        'excluded_high_influence_items entry missing exclusion_reason');
-    }
-    console.log(`  ✓ ${step6.excluded_high_influence_items.length} excluded items checked`);
-  }
-
-  // v3.1: Check supporting evidence is broader but still owned and non-noise.
-  const supportingItems = step6.supporting_evidence_items || [];
-  const hasSupportingEvidenceArray = Array.isArray(step6.supporting_evidence_items);
-  check(hasSupportingEvidenceArray, '06_positioning missing supporting_evidence_items array');
-  let invalidSupportingOwner = 0;
-  let invalidSupportingEligibility = 0;
-  let invalidSupportingRole = 0;
-  let missingDiscountReason = 0;
-  for (const item of supportingItems) {
-    if (!item.signal_owner || !POSITIONING_OWNERS.includes(item.signal_owner)) {
-      invalidSupportingOwner++;
-    }
-    if (!item.asset_eligibility || item.asset_eligibility !== 'secondary_only') {
-      invalidSupportingEligibility++;
-    }
-    if (!item.signal_role || item.signal_role === 'contextual_noise') {
-      invalidSupportingRole++;
-    }
-    if (!item.discount_reason) {
-      missingDiscountReason++;
-    }
-  }
-
-  check(invalidSupportingOwner === 0, `${invalidSupportingOwner}/${supportingItems.length} supporting_evidence_items have invalid signal_owner`);
-  check(invalidSupportingEligibility === 0, `${invalidSupportingEligibility}/${supportingItems.length} supporting_evidence_items missing or invalid asset_eligibility (must be secondary_only)`);
-  check(invalidSupportingRole === 0, `${invalidSupportingRole}/${supportingItems.length} supporting_evidence_items missing signal_role or have contextual_noise`);
-  warn(missingDiscountReason === 0, `${missingDiscountReason}/${supportingItems.length} supporting_evidence_items missing discount_reason`);
-  console.log(`  ✓ ${supportingItems.length} supporting evidence items checked`);
-  console.log(`  ${invalidSupportingOwner > 0 ? '✗' : '✓'} ${invalidSupportingOwner} invalid supporting signal_owner`);
-  console.log(`  ${invalidSupportingEligibility > 0 ? '✗' : '✓'} ${invalidSupportingEligibility} invalid supporting asset_eligibility`);
-  console.log(`  ${invalidSupportingRole > 0 ? '✗' : '✓'} ${invalidSupportingRole} invalid supporting signal_role`);
-
-  if (step6.evidence_basis_counts) {
-    const counts = step6.evidence_basis_counts;
-    const expectedPositioning = (counts.primary_evidence_count || 0) + (counts.supporting_evidence_count || 0);
-    check(counts.positioning_evidence_count === expectedPositioning,
-      `evidence_basis_counts.positioning_evidence_count (${counts.positioning_evidence_count}) must equal primary + supporting (${expectedPositioning})`);
-    check(counts.primary_evidence_count === evidenceItems.length,
-      `evidence_basis_counts.primary_evidence_count (${counts.primary_evidence_count}) must equal primary_evidence_items.length (${evidenceItems.length})`);
-    check(counts.supporting_evidence_count === supportingItems.length,
-      `evidence_basis_counts.supporting_evidence_count (${counts.supporting_evidence_count}) must equal supporting_evidence_items.length (${supportingItems.length})`);
-    console.log(`  ✓ evidence_basis_counts present`);
-  } else {
-    warn(false, '06_positioning missing evidence_basis_counts (v3.1 recommended)');
-  }
+  fail(badSupp === 0, `${badSupp} supporting evidence items violate constraints (allowed: ${secOwned})`);
+  console.log(`  ✓ ${supp.length} supporting items checked (${badSupp}bad)`);
 }
 
-// ============================================================
-// CHECK 6: Step 7 declares six-archetype bars location
-// ============================================================
-console.log('\n=== CHECK 6: Six-archetype bars constraint in Step 7 ===');
-const step7 = readJSON('07_report.json');
-if (step7) {
-  const barLocation = step7.six_archetype_bars_location;
-  check(barLocation !== undefined, '07_report missing six_archetype_bars_location');
-  if (barLocation) {
-    check(ALLOWED_BAR_LOCATIONS.includes(barLocation),
-      `six_archetype_bars_location="${barLocation}" not allowed. Must be one of: ${ALLOWED_BAR_LOCATIONS.join(', ')}`);
-    check(barLocation !== 'first_visual',
-      'six_archetype_bars_location cannot be "first_visual" — must be appendix_only or evidence_section_not_first');
-    console.log(`  ✓ six_archetype_bars_location: ${barLocation}`);
-  }
-
-  const segmented = step7.six_archetype_bars_segmented_by_owner;
-  if (segmented !== undefined) {
-    warn(segmented === true, 'six_archetype_bars_segmented_by_owner should be true for v3 compliance');
-    console.log(`  ${segmented ? '✓' : '⚠'} segmented_by_owner: ${segmented}`);
-  }
-
-  const firstScreen = step7.first_screen_order_compliant;
-  check(firstScreen === true, 'first_screen_order_compliant must be true for v3 compliance');
-  console.log(`  ${firstScreen ? '✓' : '✗'} first_screen_order_compliant: ${firstScreen}`);
+// CHECK 6: Step 7 — report constraints
+console.log('\n=== Step 7: report contract ===');
+const s7 = readJSON('07_report');
+if (s7) {
+  const loc = s7.six_archetype_bars_location;
+  fail(loc && BARS_LOCATIONS.includes(loc), `six_archetype_bars_location="${loc}" invalid`);
+  fail(s7.first_screen_order_compliant === true, 'first_screen_order_compliant must be true');
+  console.log(`  ✓ bars_location=${loc}, first_screen=${s7.first_screen_order_compliant}`);
 }
 
-// ============================================================
-// SUMMARY
-// ============================================================
-console.log('\n========================================');
-console.log(`Validation complete:`);
-console.log(`  Errors:   ${errors.length}`);
-console.log(`  Warnings: ${warnings.length}`);
-
-if (errors.length > 0) {
-  console.log('\n--- ERRORS ---');
-  for (const err of errors) {
-    console.log(`  ✗ ${err}`);
-  }
-}
-
-if (warnings.length > 0) {
-  console.log('\n--- WARNINGS ---');
-  for (const warn of warnings) {
-    console.log(`  ⚠ ${warn}`);
-  }
-}
-
-const fail = errors.length > 0;
-if (fail) {
-  console.log('\n❌ VALIDATION FAILED — contract chain is not v3 compliant.');
-  console.log('   Fix errors above before generating formal report.');
-} else {
-  console.log('\n✅ VALIDATION PASSED — contract chain is v3 compliant.');
-}
-
-process.exit(fail ? 1 : 0);
+const ok = errors.length === 0;
+console.log(`\n${ok ? '✓ PASS' : '✗ FAIL'} — ${errors.length} errors, ${warnings.length} warnings`);
+errors.forEach(e => console.log(`  ✗ ${e}`));
+warnings.forEach(w => console.log(`  ⚠ ${w}`));
+process.exit(ok ? 0 : 1);

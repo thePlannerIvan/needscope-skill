@@ -74,27 +74,14 @@ v3 去除了仅依赖随机审核的不足，v3.2 进一步加入辅助证据审
 
 ## Gate 规则
 
-### v3 致命失败条件（触发任一条件则 gate 直接 fail）
-
-1. **任何 primary_eligible 误判**：主落点证据中存在明确是 founder/content/campaign/community/platform/category/competitor/fan 语境的文本。
-2. **meme-only joy 进入 primary_evidence**：任何仅由表情/梗驱动的愉悦型信号被标记为 primary_eligible。
-3. **系统性 signal_owner 错误**：同一类 signal_owner 误判出现 ≥3 次。
-4. **系统性 asset_eligibility 错误**：同一类 asset_eligibility 误判出现 ≥3 次。
-5. **高互动上下文样本未单独审核**：高互动/高风险语境样本仅作为随机样本审核，未经定向审查。
-6. **任何非法 owner-eligibility 组合**：`founder/content/campaign/community/platform/category/competitor + primary_eligible/secondary_only`。
-
-### 通过条件（全部满足）
-1. 无致命失败条件触发。
-2. 无系统性极性反转（同一方向错误 ≥3 次）。
-3. 无系统性 signal_owner 误归因（同一类型误归 ≥3 次）。
-4. 低置信 / 无信号编码数占总数的比例得到合理解释。
-5. 全局抽样错误率 < 15%。
-
-### 未通过
-- 有系统性错误 → 局部修补后重跑对应批次
-- 全局错误率 ≥ 15% → 需要审查编码 prompt 并重跑
-- **致命失败** → 修正 asset_eligibility 规则后重跑，不得绕过
-- **Gate 未通过时不得进入 Step 6**
+致命失败条件详见 `domain/signal-owner-rules.md`。核心防线：
+- **任何 primary_eligible 误判** → 直接 fail
+- **任何非法 owner-eligibility 组合** → 直接 fail。非法定义取决于 `analysis_object_type`：
+  - **品牌分析**（默认）: founder/content/campaign/community/platform/competitor + primary_eligible/secondary_only 为非法
+  - **人物分析**（`analysis_object_type=founder/public_person/content_ip`）: `founder + primary_eligible/secondary_only` 合法，`content + secondary_only` 有条件合法；判定规则见 `domain/signal-owner-rules.md`
+- **系统性错误**（同类型 ≥3 次）→ fail，须修正后重跑
+- 全局抽样错误率 < 15% 才可通过
+- 未通过则**不得进入 Step 6**
 
 ## 输出文件
 
@@ -103,20 +90,8 @@ v3 去除了仅依赖随机审核的不足，v3.2 进一步加入辅助证据审
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `sample_size` | integer | ✅ | 审核抽样总数量 |
-| `random_review` | object | ✅ | **v3**: 随机抽样审核结果 |
-| `high_like_review` | object | ✅ | **v3**: 高互动样本审核结果 |
-| `context_risk_review` | object | ✅ | **v3**: 上下文风险样本审核结果 |
-| `primary_evidence_review` | object | ✅ | **v3**: 主落点证据逐条审核结果 |
-| `supporting_evidence_review` | object | ✅ | **v3.2**: 辅助证据审核结果 |
-| `critical_errors` | array | ✅ | 严重错误列表（含 v3 ineligible_primary 类型） |
-| `systematic_error_types` | array | 否 | 系统性错误类型（同一类型 ≥3 次时记录） |
-| `critical_failures` | array | 否 | **v3**: 致命失败条件列表 |
-| `gate_result` | string | ✅ | pass / fail_rerun / fail_prompt_revision |
-| `rerun_required` | boolean | ✅ | 是否需要重跑 |
-| `patch_instructions` | string | 否 | 如果需要重跑，具体的修正说明 |
+字段定义见 `references/contracts/contract-definitions.md#step-5-05_quality_gate`。  
+关键注意：必须包含全部五组审核（random / high_like / context_risk / primary_evidence / supporting_evidence）。
 
 ## Completion Criterion
 

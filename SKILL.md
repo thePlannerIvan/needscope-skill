@@ -111,52 +111,29 @@ description: |
 | `report.html` | 最终 HTML 预览 |
 | `work/contracts/07_report.json` | Step 7 输出合约 |
 
-## 强门禁规则
+## 门禁规则
 
-### Fail-fast: 没有合约链，不得生成正式报告
-- 正式 NeedScope 报告必须同时具备 `work/contracts/03_object_filter.json`、`work/contracts/04_archetype_coding.json`、`work/contracts/05_quality_gate.json`、`work/contracts/06_positioning.json`。
-- 如果缺少任一合约，只能输出"预分析/流程未完成"说明，列出缺失合约和下一步，不得生成 `report.md` 或 `report.html`。
-- 关键词、词频、表情符号、搜索词匹配只能用于 Step 0/Step 2 的预检或抽样设计，不得作为 Step 6 主落点或正式得分依据。
-- 任何由 `doge/哈哈/笑/偷笑/梗/弹幕/评论区` 等平台或社区表达驱动的愉悦型信号，必须先经过 Step 3/Step 4 的 `signal_owner` 归因；未归因为 `brand/product/product_line` 前，不得进入品牌主落点。
+### Fail-fast
+正式报告必须同时具备 `work/contracts/03`-`06` 四个合约。缺失 → 只输出预分析。  
+禁用别名：`04_semantic_coding`、`06_scoring_positioning`、`07_report_generation`。  
+纯关键词/词频/表情不得作为主落点证据。
 
-### Alias Name Disallowance
-- 正式运行禁止使用以下别名合约名：`04_semantic_coding.json`、`06_scoring_positioning.json`、`07_report_generation.json`。
-- 如果运行输出中包含上述别名文件，该运行视为 legacy/incomplete，不得作为正式报告依据。
-- 活跃合约必须使用以下精确文件名：
-  - `work/contracts/00_data_inventory.json` 到 `work/contracts/07_report.json`（对应 Step 0–Step 7）。
+### 四大 Gate（任一不通过则停止/重跑，不得进入下游）
+1. **Step 0→1**: `analysis_object_type` 必须明确（brand/product/founder/content-IP 等）。
+2. **Step 1→2**: 用户确认范围 + `analysis_lens`。涉及 founder/IP 时须指定口径（brand_positioning / founder_shadow / content_ip_shadow）。
+3. **Step 3→4**: 误判率 < 10%。campaign/community/platform 信号不得混入品牌证据。
+4. **Step 5→6**: 无系统性极性反转 / signal_owner 误归因 / asset_eligibility 误判。
 
-### Gate 1 (Step 0 → Step 1): 分析对象类型必须明确
-- 必须填写 `analysis_object_type`（brand / product / product_line / founder / public_person / content_ip / campaign / platform_community）
-- 对象类型影响后续所有 signal_owner 归因和平台语境判断
-
-### Gate 2 (Step 1 → Step 2): 用户必须确认
-- 向用户展示数据盘点摘要（不超过 5 行）
-- 必须获得用户同意后才能进入后续分析
-- 用户可选择仅跑部分层级
-- 如果分析对象是 `founder`、`public_person`、`content_ip` 或创始人与品牌高度绑定，必须让用户确认主口径：
-  - `brand_positioning`：只判定品牌人格主落点
-  - `founder_shadow`：创始人/人物作为旁路画像，不进入品牌主证据
-  - `content_ip_shadow`：内容体验作为旁路画像，不进入品牌主证据
-- 未确认上述口径时，默认只能输出品牌主落点 + 旁路风险说明，不得把 founder/content 写入品牌主证据。
-
-### Gate 3 (Step 3 → Step 4): 对象相关性误判率 < 10%
-- 抽样检查 `15 related + 15 non_related`
-- 关键误判率低于 10% 才可通过
-- 如误判集中在某类文本，修正规则后局部重跑
-- **未通过不得进入 Step 4**
-
-### Gate 4 (Step 5 → Step 6): 编码质量门禁
-- 无系统性极性反转（负向信号被误判为正向）
-- 无系统性 signal_owner 误归因
-- 无系统性 asset_eligibility 误判（v3）
-- 空编码比例得到合理解释
-- **未通过时必须局部修正或重跑，不得进入 Step 6**
+### 品牌证据来源
+主落点只来自 `brand/product/product_line + primary_eligible`，详见 `domain/signal-owner-rules.md`。  
+founder/content/IP/campaign/community/platform/competitor 信号只用于旁路/语境说明。  
+报告第一屏必须先展示自有信号与语境信号的区分。
 
 ## 资源路由
 
 | 步骤 | 必读 ref | 领域知识 ref | 可选工具 |
 |------|---------|-------------|---------|
-| Step 0 | `workflow/00-data-inventory.md` | `domain/analysis-object-types.md`, `domain/platform-contexts.md` | `head`, `qsv`, `jq` |
+| Step 0 | `workflow/00-data-inventory.md` | `domain/analysis-object-types.md` | `head`, `qsv`, `jq` |
 | Step 1 | `workflow/01-scope-checkpoint.md` | — | — |
 | Step 2 | `workflow/02-sampling-strategy.md` | — | CSV/JSON 统计脚本 |
 | Step 3 | `workflow/03-object-related-filter.md` | `domain/signal-owner-rules.md` | 批次脚本 |
@@ -167,26 +144,9 @@ description: |
 
 ## Contract 链
 
-```
-00_data_inventory.json → 01_scope_decision.json → 02_sampling_plan.json
-→ 03_object_filter.json → 04_archetype_coding.json → 05_quality_gate.json
-→ 06_positioning.json → 07_report.json
-```
+`00_data_inventory → 01_scope_decision → 02_sampling_plan → 03_object_filter → 04_archetype_coding → 05_quality_gate → 06_positioning → 07_report`
 
-每个 step 必须：
-1. **读取前一步的 contract**（了解前置条件是否满足）
-2. **检查前一步的 completion criterion**
-3. **执行后写当前步的 contract**
-
-## 品牌主落点硬规则
-
-- `primary_archetype` 只能从 `signal_owner=brand/product/product_line` 的信号中判定。
-- `primary_evidence_items` 使用严格三重约束：`brand/product/product_line + primary_eligible + 非 contextual_noise`。
-- `supporting_evidence_items` 可使用较宽松的方向性辅助证据：`brand/product/product_line + secondary_only + 非 contextual_noise`，但必须降权、单独展示，不得单独决定主落点。
-- `founder/content/campaign/category/competitor` 信号必须单独说明，默认不得进入 `primary_evidence_items` 或 `supporting_evidence_items`。即使用户确认 founder/content-IP 与品牌高度绑定，也只能作为 `shadow_analysis`、`platform_splits`、`tension_archetypes` 或 `context_signal_summary` 呈现，不可改写品牌主落点证据口径。
-- `community/platform` 信号永远不得作为品牌主落点证据，只能进入 `noise_archetypes`、`platform_splits` 或"语境信号"章节。
-- 报告第一屏必须先展示"品牌自有信号"与"语境/平台/社区信号"的区分，再展示任何六原型分数。
-- 如果 Step 4 中出现 `founder/content/community/platform/campaign/category/competitor + primary_eligible/secondary_only`，该运行必须视为门禁失败，回到 Step 4 修正后才能生成正式报告。
+每个 Step 读取前一步的 contract（确认前置条件），执行后写当前步。全部 field 定义见 `references/contracts/contract-definitions.md`。
 
 ## 后运行迭代
 
@@ -206,4 +166,4 @@ description: |
 
 ---
 
-> 读取此文件的 Agent 必须先读 `planning/v3-upgrade-execution-plan.md`、`planning/workflow-map.md` 和 `planning/development-plan.md` 了解完整架构意图。
+> 此 Skill 的规划设计文件已归档至 `references/archive/planning/`。当前活跃路径从 workflow/ domain/ contracts/ templates/ 开始。

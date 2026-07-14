@@ -110,16 +110,8 @@ Step 6 落点判定完成后。输出可交付的分析报告。
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `report_files` | array | ✅ | 生成的文件路径列表 |
-| `sections_included` | array | ✅ | 报告中包含的章节列表 |
-| `six_archetype_bars_location` | string | ✅ | **v3**: appendix_only / evidence_section_not_first / not_present |
-| `six_archetype_bars_segmented_by_owner` | boolean | ✅ | **v3**: 条形图是否按 signal_owner 分段 |
-| `first_screen_order_compliant` | boolean | ✅ | **v3**: 首屏是否遵循 v3 顺序 |
-| `confidence_disclosure` | string | ✅ | 整体置信度的公开说明 |
-| `data_gap_section_required` | boolean | ✅ | 是否需要数据补充章节 |
-| `warnings` | array | 否 | 报告中标注的警告或边界说明 |
+字段定义见 `references/contracts/contract-definitions.md#step-7-07_report`。  
+关键注意：必须声明 `six_archetype_bars_location` 和 `first_screen_order_compliant`。
 
 ## Completion Criterion
 

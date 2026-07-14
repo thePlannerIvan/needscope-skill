@@ -86,20 +86,8 @@
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `total_records` | integer | ✅ | 原始数据总记录数 |
-| `dedupe_strategy` | string | ✅ | 去重方法（exact / fuzzy / none） |
-| `sampling_mode` | string | ✅ | full / stratified / clustered / active_learning |
-| `strata` | array | 否 | 分层维度列表 |
-| `sample_sizes` | object | ✅ | 每层/每桶的抽样数量 |
-| `random_sample` | object | ✅ | **v3**: 随机样本 { size, selection_method } |
-| `high_like_sample` | object | ✅ | **v3**: 高互动样本 { size, criteria } |
-| `context_risk_sample` | object | ✅ | **v3**: 上下文风险样本 { size, included_risk_flags } |
-| `primary_candidate_sample` | object | 否 | **v3**: 主落点候选样本 { size, criteria } |
-| `full_coding_subsets` | array | 否 | 全量编码的子集说明 |
-| `excluded_records` | integer | ✅ | 排除的记录数 |
-| `rationale` | string | ✅ | 策略选择理由及误差影响评估 |
+字段定义见 `references/contracts/contract-definitions.md#step-2-02_sampling_plan`。  
+关键注意：必须包含 `random_sample` + `high_like_sample` + `context_risk_sample`，仅随机抽样不通过质量评审。
 
 ## Completion Criterion
 

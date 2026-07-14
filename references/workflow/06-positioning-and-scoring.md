@@ -34,48 +34,18 @@
 
 ### 3. 判定主落点（v3.2 双层品牌自有证据）
 
-**核心主证据 `primary_evidence_items` 的输入条件**：
-```
-signal_owner in brand / product / product_line
-AND asset_eligibility = primary_eligible
-AND signal_role != contextual_noise
-```
+**证据筛选规则**（详见 `domain/signal-owner-rules.md`）：
+- `primary_evidence_items`: `signal_owner=brand/product/product_line`（或人物分析时的 founder）+ `asset_eligibility=primary_eligible` + `signal_role≠contextual_noise`
+- `supporting_evidence_items`: `brand/product/product_line`（或人物分析时的 founder/content）+ `secondary_only` + 非 contextual_noise，须有 `discount_reason`
+- 禁止进入（品牌分析默认）：founder/content/IP/campaign/community/platform/competitor / 纯表情梗 / contextual_noise
+- **人物分析例外**（`analysis_object_type=founder/public_person/content_ip`）: `founder + primary_eligible` 合法；`content + secondary_only` 有条件合法。详见 `domain/signal-owner-rules.md`
 
-**方向性辅助证据 `supporting_evidence_items` 的输入条件**：
-```
-signal_owner in brand / product / product_line
-AND asset_eligibility = secondary_only
-AND signal_role in core_identity / supporting_asset
-AND eligibility_reason explains the context discount
-```
-
-允许的辅助证据示例：
-- 文本直接评价 Adidas/产品，但带轻微 `[笑哭R]`、`[doge]` 等语气标记。
-- 文本直接评价品牌设计、产品、价格、文化归属，但出现世界杯/赛事语境。
-- 文本评价品牌活动对品牌的印象，但不是纯粉丝应援、纯 celebrity praise 或纯 campaign slogan。
-
-仍然禁止进入主落点的证据：
-- `community/platform/category/competitor` 信号。
-- `founder/celebrity` 粉丝表达。
-- `content` 作品体验、单期视频反馈、内容话题讨论。
-- 纯 campaign slogan 或活动机制互动。
-- `signal_role=contextual_noise`。
-- 只有表情、玩梗、哈哈、评论区氛围，没有品牌/产品评价的文本。
-
-具体判定流程：
-1. 从 coded_items 中筛选核心主证据作为 `primary_evidence_items`。
-2. 从 coded_items 中筛选方向性辅助证据作为 `supporting_evidence_items`。
-3. 同时报告 `primary_evidence_count`、`supporting_evidence_count` 和 `positioning_evidence_count`。
-4. 判定主落点时，先看核心主证据；当核心证据较少但辅助证据与同一原型方向一致时，可把辅助证据低权重纳入解释。
-5. 如果 `primary_evidence_items` < 5 且 `supporting_evidence_items` 不能形成一致方向 → `primary_archetype = 未判定`。
-6. 如果核心证据与辅助证据方向冲突，以核心证据为准，并把冲突写入 tension 或 confidence。
-7. 如果主要证据来自社区/活动/内容/创始人语境 → 不得将这些信号归入品牌主定位。
-
-**附加规则**：
-- founder/content/campaign 信号只能作为旁路说明，写入 `context_signal_summary`、`platform_splits`、`tension_archetypes` 或 `shadow_analysis`。不得写入 `primary_evidence_items` 或 `supporting_evidence_items`。
-- community/platform 信号不得作为品牌主落点证据。
-- **主落点 = 最密集、最一致、最核心的信号集群**，不一定是最高分原型。
-- 如果 `owned_signals` 不足以支撑主落点，`primary_archetype` 写为 `未判定`，并填写 `insufficient_owned_signal_reason`。
+**判定流程**：
+1. 筛选核心主证据 → `primary_evidence_items`
+2. 筛选方向性辅助证据 → `supporting_evidence_items`
+3. 先看核心主证据判定主落点；核心证据不足时辅助证据低权重纳入
+4. 核心 + 辅助 < 5 条或方向分散 → `primary_archetype = 未判定`，填写 `insufficient_owned_signal_reason`
+5. 核心与辅助冲突 → 以核心为准，冲突写入 tension/confidence
 
 ### 3.1 旁路画像（founder/content-IP shadow analysis）
 
@@ -123,25 +93,8 @@ AND eligibility_reason explains the context discount
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `evidence_metrics` | object | ✅ | 信号密度、置信度分布、数据量统计 |
-| `owned_signal_summary` | object | ✅ | brand/product/product_line 信号摘要 |
-| `context_signal_summary` | object | ✅ | founder/content/community/platform/campaign 信号摘要 |
-| `primary_archetype` | string | ✅ | 主落点原型；自有信号不足时写 `未判定` |
-| `primary_evidence_items` | array | ✅ | **v3**: 支撑 primary_archetype 的证据条目（满足三重约束） |
-| `supporting_evidence_items` | array | ✅ | **v3.2**: 可辅助判断落点的 secondary_only 自有信号，必须降权 |
-| `evidence_basis_counts` | object | ✅ | **v3.2**: 核心/辅助/语境证据数量 |
-| `excluded_high_influence_items` | array | 否 | **v3**: 被排除的高影响信号及理由 |
-| `insufficient_owned_signal_reason` | string | 否 | **v3**: 当 primary_archetype=未判定时，说明不足原因 |
-| `shadow_analysis` | object | 否 | **v3.2**: founder/content-IP 旁路画像，不参与品牌主证据 |
-| `secondary_archetypes` | array | 否 | 次落点原型列表（可空） |
-| `tension_archetypes` | array | 否 | 张力信号列表 |
-| `absent_archetypes` | array | 否 | 完全无信号的缺席原型 |
-| `noise_archetypes` | array | 否 | 被判定为平台/社区噪声的原型 |
-| `negative_gaps` | array | 否 | 负向缺口的原型 + 代表性文本 |
-| `platform_splits` | array | 否 | 不同平台/语境下的信号分布差异 |
-| `confidence` | string | ✅ | 此判定的整体置信度 |
+字段定义见 `references/contracts/contract-definitions.md#step-6-06_positioning`。  
+关键注意：`primary_evidence_items` 必须满足三重约束；`primary_archetype=未判定` 时须填写 `insufficient_owned_signal_reason`。
 
 ## Completion Criterion
 

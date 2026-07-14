@@ -57,15 +57,8 @@
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `layers_to_run` | array | ✅ | 用户确认要跑的层级列表，如 ["A", "B"] |
-| `accepted_confidence_limit` | string | ✅ | 用户是否接受当前数据能支持的最高置信度 |
-| `coding_budget_mode` | string | ✅ | conservative / balanced / exhaustive（用户是否在意 token 成本） |
-| `analysis_lens` | string | ✅ | brand_positioning / founder_shadow / content_ip_shadow / mixed_with_guardrails |
-| `shadow_analysis_allowed` | boolean | ✅ | 是否允许 founder/content 旁路画像 |
-| `user_constraints` | string | 否 | 用户的额外约束或特殊要求 |
-| `approved_to_continue` | boolean | ✅ | 用户是否同意继续分析 |
+字段定义见 `references/contracts/contract-definitions.md#step-1-01_scope_decision`。  
+关键注意：涉及 founder/content-IP 时须确认 `analysis_lens`。
 
 ## Completion Criterion
 

@@ -89,14 +89,32 @@
 | category | exclude_from_positioning | — |
 | competitor | exclude_from_positioning | — |
 
-### 硬约束
+### 人物/公众人物分析的覆盖规则
+
+当 `analysis_object_type` 为 `founder` / `public_person` / `content_ip` 时，上述默认规则中的以下项被覆盖。根本原则：**人物本身成为分析主体，founder 等效于品牌分析中的 brand**。
+
+| signal_owner | 覆盖 asset_eligibility | 说明 |
+|-------------|----------------------|------|
+| founder | primary_eligible | 直接评价人物本人的特质/行为/人格 → 可进入主定位 |
+| founder | secondary_only | 间接或语境性评价 → 辅助证据 |
+| content | secondary_only 或 context_only | 如果内容是人物本人的核心产出（如视频创作者的内容），可升格为 secondary_only；否则保持 context_only |
+| campaign | context_only（不变） | — |
+| community | exclude_from_positioning（不变） | — |
+| platform | exclude_from_positioning（不变） | — |
+
+**人物分析的额外硬约束**：
+- `founder + primary_eligible` 仅当文本直接评价人物本人的**特质/行为/人格**。评价"他人如何对待该人物"（如"他妻子照顾他"）不是人物人格证据。
+- `content + secondary_only` 仅当内容承载了人物的核心表达（如创作者视频中的个人呈现）。纯"内容好看/不好看"的评价保持 context_only。
+- 其他约束（contextual_noise 不得 primary_eligible、表情梗不得 primary_eligible 等）保持不变。
+
+### 硬约束（通用）
 
 - `signal_role=contextual_noise` 的文本**不得**为 `primary_eligible`。
 - 单独由表情/梗标记驱动的愉悦型信号（doge/哈哈/笑/偷笑等）不得为 `primary_eligible`。
 - 高互动（高赞/高回复）不改变 asset_eligibility。社区高互动文本仍为 exclude_from_positioning。
 - 如果一条文本有多个 signal_owner 倾向，以最低的 asset_eligibility 为准。
-- `secondary_only` 仅适用于 brand/product/product_line 的直接评价且存在轻微语境污染；纯粉丝、纯平台、纯 campaign、category、competitor 不得用 secondary_only 参与品牌落点。
-- `founder/content/campaign/community/platform/category/competitor + primary_eligible/secondary_only` 是非法组合。需要呈现时，必须放入旁路画像、语境摘要、平台分裂或排除项。
+- `secondary_only` 仅适用于 brand/product/product_line 的直接评价（或人物分析中的 founder）且存在轻微语境污染。
+- `founder/content/campaign/community/platform/category/competitor + primary_eligible/secondary_only` 是品牌分析的非法组合。**人物分析时 founder + primary_eligible/secondary_only 合法**，`content + secondary_only` 有条件合法。
 
 ## signal_role 判定
 

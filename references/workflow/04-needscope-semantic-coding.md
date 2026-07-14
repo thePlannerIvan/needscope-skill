@@ -31,32 +31,14 @@
    | **`eligibility_reason`** | **v3 新增**: asset_eligibility 的判断理由 |
    | `notes` | 可选：编码中的歧义说明 |
 
-3. **asset_eligibility 判定规则（v3.2）**
+3. **asset_eligibility 判定规则**
 
-   ### 允许值
-   | 值 | 含义 | 进入品牌主定位？ |
-   |----|------|----------------|
-   | `primary_eligible` | 可支持品牌主定位 | ✅ 可进入 |
-   | `secondary_only` | 可作为方向性辅助证据 | ⚠️ 可低权重进入落点解释，不可单独决定 main |
-   | `context_only` | 仅用于语境说明 | ❌ 不可进入 |
-   | `exclude_from_positioning` | 排除在定位证据外 | ❌ 不可进入 |
-
-   ### 默认规则
-   - `brand / product / product_line` 的 signal_owner 只有当文本直接评价品牌/产品本身且没有强语境污染时，才能为 `primary_eligible`。
-   - `brand / product / product_line` 的文本如果直接评价品牌/产品，但同时带有轻微赛事、表情、玩笑或内容语境，标为 `secondary_only`，可作为低权重辅助证据。
-   - `campaign` 默认为 `context_only` 或 `exclude_from_positioning`，不得为 `primary_eligible` 或 `secondary_only`。活动若反映品牌策略，只能在 Step 6 的 `context_signal_summary` 或 `shadow_analysis` 解释，不进入品牌证据数组。
-   - `founder` 默认为 `context_only`，不得为 `primary_eligible` 或 `secondary_only`。即使创始人与品牌强绑定，也只能进入旁路画像或平台分裂说明。
-   - `content` 默认为 `context_only`，不得为 `primary_eligible` 或 `secondary_only`。内容体验可形成 content-IP shadow analysis，但不能成为品牌主落点证据。
-   - `community / platform / category / competitor` 必须为 `exclude_from_positioning` 或 `context_only`。
-   - 单独由表情/梗标记（如 doge、哈哈、笑、偷笑）驱动的愉悦型信号不得为 `primary_eligible`。
-
-   ### 硬约束
-   - 高赞评论不等于品牌人格。只有 `primary_eligible` 可作为核心主证据；`secondary_only` 只能作为方向性辅助证据，必须降权并单独标注。
-   - `signal_role=contextual_noise` 的文本**不得**为 `primary_eligible`。
-   - `primary_eligible` 只能与 `signal_owner=brand/product/product_line` 同时出现。
-   - `secondary_only` 只能与 `signal_owner=brand/product/product_line` 同时出现。
-   - `founder/content/campaign/community/platform/category/competitor + primary_eligible/secondary_only` 是门禁失败，不是可解释例外。
-   - 如果某条文本有多个 signal_owner（如同时提到品牌和社区），以较低的 asset_eligibility 为准。
+   asset_eligibility 规则详见 `domain/signal-owner-rules.md`。核心约束：
+   - `primary_eligible` / `secondary_only` 只能搭配 `signal_owner=brand/product/product_line`
+   - 其他 signal_owner 默认 `context_only` 或 `exclude_from_positioning`
+   - `signal_role=contextual_noise` → 不得为 primary_eligible 或 secondary_only
+   - 表情/梗/平台文化驱动的愉悦型信号不得为 primary_eligible
+   - 合并多条规则时取最低的 asset_eligibility
 
 4. **编码原则**
    - `sentiment` 表示对象**拥有或缺乏该原型特质**，不表示评论情绪正负
@@ -93,16 +75,8 @@
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `coded_count` | integer | ✅ | 编码文本总数 |
-| `empty_archetype_count` | integer | ✅ | 未分配原型的文本数 |
-| `archetype_signal_counts` | object | ✅ | 每个原型的信号频次 |
-| `sentiment_counts` | object | ✅ | positive / negative 分布 |
-| `signal_owner_distribution` | object | ✅ | 各 signal_owner 的频次分布 |
-| `low_confidence_count` | integer | ✅ | 低置信编码数 |
-| `coded_items` | array | ✅ | 每条编码项（含 asset_eligibility / eligibility_reason） |
-| `schema_warnings` | array | 否 | 编码中的异常或歧义记录 |
+字段定义见 `references/contracts/contract-definitions.md#step-4-04_archetype_coding`。  
+关键注意：`coded_items` 每条必须完整填写 `asset_eligibility` + `eligibility_reason`，且满足上述硬约束。
 
 ## Completion Criterion
 

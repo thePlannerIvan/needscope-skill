@@ -42,9 +42,17 @@
    | `competitor_context` | 纯粹讨论竞品，未落脚到分析对象 | "XX 那个更好用" |
    | `non_related` | 完全不相关 | "今天天气真好" |
 
+
+   ### 人物/公众人物分析的适配
+   当 `analysis_object_type` 为 `founder` / `public_person` / `content_ip` 时，上述关系类型做以下语义映射：
+   - `brand_owned_related` → `person_direct_related`（直接评价人物本人的特质、行为、人格）
+   - `product_related` → `person_work_related`（评价人物的作品、公司、业务）
+   - `founder_or_celebrity_related` → 升格为主体的直接评价（人物即分析主体，不再是"不得进入"）
+   - `campaign_related` → `person_campaign_related`（公开活动、直播、内容实验等）
+   - 各类型能否进入主定位证据，由 `domain/signal-owner-rules.md` 的人物分析覆盖规则决定。
+
    ### 关键规则（v3）
-   - `campaign_related`、`founder_or_celebrity_related`、`content_related`、`community_context`、`platform_context` 可以被分析，但**不得进入品牌主定位证据数组**。
-   - `founder_or_celebrity_related` 和 `content_related` 即使与品牌深度绑定，也只能进入旁路画像、平台分裂或张力解释，不得在 Step 4 标为 `primary_eligible` / `secondary_only`。
+   - `campaign_related` / `founder_or_celebrity_related` / `content_related` / `community_context` / `platform_context` 可分析但**不得进入品牌主定位证据**。参见 `domain/signal-owner-rules.md`。
    - Gate 样本必须同时包含进入和排除的边界案例。
 
 3. **生成抽样检查样本**
@@ -76,16 +84,8 @@
 
 ## Contract 字段
 
-| 字段 | 类型 | 必须 | 说明 |
-|------|------|------|------|
-| `total_checked` | integer | ✅ | 总检查文本数 |
-| `object_related_count` | integer | ✅ | 通过过滤的文本数（编码输入） |
-| `non_object_count` | integer | ✅ | 未通过的文本数 |
-| `low_confidence_count` | integer | ✅ | 不确定的文本数 |
-| `relation_type_distribution` | object | ✅ | **v3**: 11 类对象关系的详细分布 |
-| `gate_result` | string | ✅ | pass / fail / partial_rerun_required |
-| `gate_samples` | array | ✅ | 抽样检查样本（含 relation_type 字段） |
-| `warnings` | array | 否 | 误判趋势或边界风险提示 |
+字段定义见 `references/contracts/contract-definitions.md#step-3-03_object_filter`。  
+关键注意：必须包含完整的 `relation_type_distribution`（11 类）和 `gate_samples`。
 
 ## Completion Criterion
 
